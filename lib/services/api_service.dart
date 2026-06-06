@@ -7,18 +7,9 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  // Android Emulator:
   static const String baseUrl = 'http://10.0.2.2:3000/api';
 
-  // Real Android phone example:
-  // static const String baseUrl = 'http://192.168.1.5:3000/api';
-
-  static const Duration _timeout = Duration(seconds: 15);
-
-  // =====================================================
-  // TOKEN STORAGE
-  // =====================================================
-
+  static const timeoutDuration =  Duration(seconds: 15);
   static Future<void> saveToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('auth_token', token);
@@ -38,10 +29,6 @@ class ApiService {
     await clearToken();
   }
 
-  // =====================================================
-  // HEADERS
-  // =====================================================
-
   static Future<Map<String, String>> _headers({bool auth = false}) async {
     final token = await getToken();
 
@@ -53,34 +40,34 @@ class ApiService {
     };
   }
 
-  // =====================================================
-  // RESPONSE HANDLING
-  // =====================================================
-
   static Map<String, dynamic> _handleResponse(http.Response response) {
     try {
-      if (response.body.trim().isEmpty) {
+      final body = response.body.trim();
+
+      if (body.isEmpty) {
         return {
           'statusCode': response.statusCode,
-          'message': 'Empty server response.',
+          'message': 'Empty server response',
         };
       }
 
-      final decoded = jsonDecode(response.body);
+      final decoded = jsonDecode(body);
 
       if (decoded is Map<String, dynamic>) {
-        decoded['statusCode'] = response.statusCode;
-        return decoded;
+        return {
+          ...decoded,
+          'statusCode': response.statusCode,
+        };
       }
 
       return {
         'statusCode': response.statusCode,
-        'message': 'Invalid response format.',
+        'data': decoded,
       };
-    } catch (_) {
+    } catch (e) {
       return {
         'statusCode': response.statusCode,
-        'message': 'Invalid server response.',
+        'message': 'Invalid server response',
       };
     }
   }
@@ -89,30 +76,25 @@ class ApiService {
       Future<http.Response> Function() request,
       ) async {
     try {
-      final response = await request().timeout(_timeout);
-      final data = _handleResponse(response);
+      final response = await request().timeout(timeoutDuration);
 
       if (response.statusCode == 401) {
         await clearToken();
       }
 
-      return data;
+      return _handleResponse(response);
     } on TimeoutException {
       return {
         'statusCode': 0,
-        'message': 'Request timeout. Server is taking too long.',
+        'message': 'Request timeout. Please try again.',
       };
-    } catch (_) {
+    } catch (e) {
       return {
         'statusCode': 0,
-        'message': 'Unable to connect to server.',
+        'message': 'Unable to connect to server',
       };
     }
   }
-
-  // =====================================================
-  // AUTH
-  // =====================================================
 
   static Future<Map<String, dynamic>> signup(
       String name,
@@ -179,10 +161,6 @@ class ApiService {
     });
   }
 
-  // =====================================================
-  // PRODUCTS
-  // =====================================================
-
   static Future<Map<String, dynamic>> getProducts({
     String? category,
     String? search,
@@ -198,7 +176,7 @@ class ApiService {
     }
 
     final uri = Uri.parse('$baseUrl/products').replace(
-      queryParameters: params,
+      queryParameters: params.isEmpty ? null : params,
     );
 
     return _safeRequest(() async {
@@ -278,10 +256,6 @@ class ApiService {
     });
   }
 
-  // =====================================================
-  // WISHLIST
-  // =====================================================
-
   static Future<Map<String, dynamic>> getWishlist() async {
     return _safeRequest(() async {
       return http.get(
@@ -324,13 +298,10 @@ class ApiService {
     });
   }
 
-  // =====================================================
-  // ORDERS
-  // =====================================================
-
   static Future<Map<String, dynamic>> placeOrder(
       int productId, {
         int quantity = 1,
+        String paymentMethod = 'Demo Payment',
       }) async {
     return _safeRequest(() async {
       return http.post(
@@ -343,7 +314,7 @@ class ApiService {
               'quantity': quantity,
             }
           ],
-          'payment_method': 'Demo Payment',
+          'payment_method': paymentMethod,
         }),
       );
     });

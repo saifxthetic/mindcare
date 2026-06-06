@@ -1,4 +1,7 @@
+// lib/profile.dart
+
 import 'package:flutter/material.dart';
+import 'app_drawer.dart';
 import 'bottom_navigation.dart';
 import 'services/api_service.dart';
 import 'user_data.dart';
@@ -42,8 +45,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Profile')),
+      appBar: AppBar(
+        title: const Text('Profile'),
+        leading: Builder(
+          builder: (ctx) => IconButton(
+            icon: const Icon(Icons.menu),
+            onPressed: () => Scaffold.of(ctx).openDrawer(),
+          ),
+        ),
+      ),
+      drawer: const AppDrawer(currentRoute: '/profile'),
       body: SafeArea(
         child: _loading
             ? const Center(child: CircularProgressIndicator())
@@ -53,21 +67,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
               CircleAvatar(
                 radius: 48,
+                backgroundColor: primary.withOpacity(0.12),
                 child: Text(
-                  UserData.name.isNotEmpty ? UserData.name[0].toUpperCase() : 'M',
-                  style: const TextStyle(fontSize: 34),
+                  UserData.name.isNotEmpty
+                      ? UserData.name[0].toUpperCase()
+                      : 'M',
+                  style: TextStyle(
+                      fontSize: 34,
+                      color: primary,
+                      fontWeight: FontWeight.bold),
                 ),
               ),
               const SizedBox(height: 18),
-              Text(UserData.name, style: Theme.of(context).textTheme.headlineMedium),
+              Text(UserData.name,
+                  style: Theme.of(context).textTheme.headlineMedium),
               const SizedBox(height: 6),
-              Text(UserData.email),
+              Text(UserData.email,
+                  style: TextStyle(color: Colors.grey.shade600)),
               const SizedBox(height: 28),
               Card(
                 child: ListTile(
                   leading: const Icon(Icons.spa),
                   title: const Text('MindCare Wellness Marketplace'),
-                  subtitle: const Text('Browse digital wellness products and services.'),
+                  subtitle: const Text(
+                      'Browse digital wellness products and services.'),
                 ),
               ),
               const Spacer(),
@@ -75,12 +98,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 onPressed: _logout,
                 icon: const Icon(Icons.logout),
                 label: const Text('Logout'),
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red.shade600),
               ),
             ],
           ),
         ),
       ),
-      bottomNavigationBar: const AppBottomNavigation(currentIndex: 3),
+      bottomNavigationBar: const AppBottomNavigation(currentIndex: 4),
     );
   }
 }

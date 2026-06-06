@@ -1,5 +1,9 @@
+// lib/wishlist.dart
+
 import 'package:flutter/material.dart';
+import 'app_drawer.dart';
 import 'bottom_navigation.dart';
+import 'cart_manager.dart';
 import 'models/product.dart';
 import 'product_detail.dart';
 import 'services/api_service.dart';
@@ -28,7 +32,9 @@ class _WishlistScreenState extends State<WishlistScreen> {
     setState(() {
       _loading = false;
       if (data['wishlist'] is List) {
-        _items = (data['wishlist'] as List).map((item) => Product.fromJson(item)).toList();
+        _items = (data['wishlist'] as List)
+            .map((item) => Product.fromJson(item))
+            .toList();
       }
     });
   }
@@ -42,39 +48,99 @@ class _WishlistScreenState extends State<WishlistScreen> {
     );
   }
 
+  void _addToCart(Product product) {
+    CartManager.instance.addProduct(product);
+    setState(() {});
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${product.title} added to cart!'),
+        action: SnackBarAction(
+          label: 'View Cart',
+          onPressed: () => Navigator.pushNamed(context, '/cart'),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Wishlist')),
+      appBar: AppBar(
+        title: const Text('Wishlist'),
+        leading: Builder(
+          builder: (ctx) => IconButton(
+            icon: const Icon(Icons.menu),
+            onPressed: () => Scaffold.of(ctx).openDrawer(),
+          ),
+        ),
+      ),
+      drawer: const AppDrawer(currentRoute: '/wishlist'),
       body: SafeArea(
         child: _loading
             ? const Center(child: CircularProgressIndicator())
             : _items.isEmpty
-            ? const Center(child: Text('Your wishlist is empty.'))
+            ? Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.favorite_outline,
+                  size: 70, color: Colors.grey.shade400),
+              const SizedBox(height: 16),
+              Text('Your wishlist is empty.',
+                  style:
+                  TextStyle(color: Colors.grey.shade600)),
+            ],
+          ),
+        )
             : ListView.builder(
           padding: const EdgeInsets.all(14),
           itemCount: _items.length,
           itemBuilder: (context, index) {
             final product = _items[index];
             return Card(
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14)),
               child: ListTile(
-                leading: const CircleAvatar(child: Icon(Icons.favorite)),
-                title: Text(product.title),
-                subtitle: Text('${product.category} • \$${product.price.toStringAsFixed(2)}'),
-                trailing: IconButton(
-                  icon: const Icon(Icons.delete_outline),
-                  onPressed: () => _remove(product),
+                leading: CircleAvatar(
+                  backgroundColor: primary.withOpacity(0.10),
+                  child: Icon(Icons.favorite, color: primary),
+                ),
+                title: Text(product.title,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold)),
+                subtitle: Text(
+                    '${product.category} • \$${product.price.toStringAsFixed(2)}'),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: Icon(Icons.add_shopping_cart,
+                          color: primary),
+                      tooltip: 'Add to Cart',
+                      onPressed: () => _addToCart(product),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline,
+                          color: Colors.red),
+                      tooltip: 'Remove',
+                      onPressed: () => _remove(product),
+                    ),
+                  ],
                 ),
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => ProductDetailScreen(product: product)),
+                  MaterialPageRoute(
+                      builder: (_) =>
+                          ProductDetailScreen(product: product)),
                 ),
               ),
             );
           },
         ),
       ),
-      bottomNavigationBar: const AppBottomNavigation(currentIndex: 1),
+      bottomNavigationBar: const AppBottomNavigation(currentIndex: 2),
     );
   }
 }
